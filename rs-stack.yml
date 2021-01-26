@@ -1,0 +1,161 @@
+version: '3.7'
+
+networks:
+  overlay-net:
+    external: true
+    driver: overlay
+
+services:
+  apiserver:
+    image: dockerhub.iudx.io/iudx/rs:latest
+    environment:
+      - RS_URL=https://rs.iudx.io
+      - LOG_LEVEL=DEBUG
+    configs:
+      - source: apidoc-html
+        target: /usr/share/app/docs/apidoc.html
+      - source: iudx-png
+        target: /usr/share/app/docs/iudx.png
+      - source: openapi-yaml
+        target: /usr/share/app/docs/openapi.yaml
+      - source: rs_overview-png
+        target: /usr/share/app/docs/rs_overview.png
+    secrets:
+      - source: config-apiserver
+        target: /usr/share/app/configs/config-apiserver.json
+      - source:  keystore
+        target: /usr/share/app/configs/keystore.jks    
+    ports:
+      - "80:80"
+    expose:
+      - "9000"
+    networks:
+      - overlay-net
+    command: bash -c "exec java -Xmx1024m -jar ./fatjar.jar  --host $$(hostname) -c configs/config-apiserver.json"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.labels.rs_api_node==true"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 10s
+
+  databroker:
+    image: dockerhub.iudx.io/iudx/rs:latest
+    environment:
+      - RS_URL=https://rs.iudx.io
+      - LOG_LEVEL=DEBUG
+    secrets:
+      - source: config-databroker
+        target: /usr/share/app/configs/config-databroker.json
+    expose:
+      - "9000"
+    networks:
+      - overlay-net
+    command: bash -c "exec java -Xmx1024m -jar ./fatjar.jar  --host $$(hostname) -c configs/config-databroker.json"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.labels.databroker_node==true"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 10s
+
+  database:
+    image: dockerhub.iudx.io/iudx/rs:latest
+    environment:
+      - RS_URL=https://rs.iudx.io
+      - LOG_LEVEL=DEBUG
+    secrets:
+      - source: config-database
+        target: /usr/share/app/configs/config-database.json
+    expose:
+      - "9000"
+    networks:
+      - overlay-net
+    command: bash -c "exec java -Xmx1024m -jar ./fatjar.jar  --host $$(hostname) -c configs/config-database.json"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.labels.database_node==true"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 10s
+
+  callback:
+    image: dockerhub.iudx.io/iudx/rs:latest
+    environment:
+      - RS_URL=https://rs.iudx.io
+      - LOG_LEVEL=DEBUG
+    secrets:
+      - source: config-callback
+        target: /usr/share/app/configs/config-callback.json
+    expose:
+      - "9000"
+    networks:
+      - overlay-net
+    command: bash -c "exec java -Xmx1024m -jar ./fatjar.jar  --host $$(hostname) -c configs/config-callback.json"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.labels.rs_api_node==true"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 10s
+
+  authenticator:
+    image: dockerhub.iudx.io/iudx/rs:latest
+    environment:
+      - RS_URL=https://rs.iudx.io
+      - LOG_LEVEL=DEBUG
+    secrets:
+      - source: config-authenticator
+        target: /usr/share/app/configs/config-authenticator.json
+      - source:  keystore
+        target: /usr/share/app/configs/keystore.jks
+    expose:
+      - "9000"
+    networks:
+      - overlay-net
+    command: bash -c "exec java -Xmx1024m -jar ./fatjar.jar  --host $$(hostname) -c configs/config-authenticator.json"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.labels.rs_api_node==true"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 10s
+
+configs:
+  apidoc-html:
+    file: docs/apidoc.html
+  iudx-png:
+    file: docs/iudx.png
+  openapi-yaml:
+    file: docs/openapi.yaml
+  rs_overview-png:
+    file: docs/rs_overview.png
+    
+secrets:
+  config-apiserver:
+    file: configs/verticles/config-apiserver.json 
+  config-databroker:
+    file: configs/verticles/config-databroker.json
+  config-database:
+    file: configs/verticles/config-database.json
+  config-callback:
+    file: configs/verticles/config-callback.json
+  config-authenticator:
+    file: configs/verticles/config-authenticator.json
+  keystore:
+    file: configs/keystore.jks
