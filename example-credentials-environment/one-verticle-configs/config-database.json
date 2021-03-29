@@ -1,7 +1,6 @@
 {
     "version": "1.0",
-    "zookeepers": [ "zookeeper" ],
-    "clusterId": "iudx-rs-cluster",
+    "discoveryMechanism": "K8s-API",
     "modules": [
 	           {
             "id": "iudx.resource.server.database.DatabaseVerticle",

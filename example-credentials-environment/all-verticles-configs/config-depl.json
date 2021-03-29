@@ -2,6 +2,7 @@
     "version": "1.0",
     "zookeepers": [ "zookeeper" ],
     "clusterId": "iudx-rs-cluster",
+    "discoveryMechanism": "Zookeeper",
     "modules": [
         {
             "id": "iudx.resource.server.database.DatabaseVerticle",

@@ -10,6 +10,8 @@ import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.zookeeper.*;
+import com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategyFactory;
+import com.hazelcast.kubernetes.KubernetesProperties;
 
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.cli.CLI;
@@ -70,24 +72,37 @@ public class Deployer {
     });
   }
 
-  public static ClusterManager getClusterManager(String host,
-                                                  List<String> zookeepers,
-                                                  String clusterID) {
+  public static ClusterManager getClusterManager(String host,JsonObject configs) {
     Config config = new Config();
     config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
     config.getNetworkConfig().setPublicAddress(host);
     config.setProperty("hazelcast.discovery.enabled", "true");
     config.setProperty("hazelcast.logging.type", "log4j2");
-    DiscoveryStrategyConfig discoveryStrategyConfig =
-        new DiscoveryStrategyConfig(new ZookeeperDiscoveryStrategyFactory());
-    discoveryStrategyConfig.addProperty(ZookeeperDiscoveryProperties.ZOOKEEPER_URL.key(),
-                                          String.join(",", zookeepers));
-    discoveryStrategyConfig.addProperty(ZookeeperDiscoveryProperties.GROUP.key(), clusterID);
-    config.getNetworkConfig()
-          .getJoin()
-          .getDiscoveryConfig()
-          .addDiscoveryStrategyConfig(discoveryStrategyConfig);
+    String discoveryMechanism = configs.getString("discoveryMechanism");
 
+    if (discoveryMechanism.equals("Zookeeper")) {
+      List<String> zookeepers = configs.getJsonArray("zookeepers").getList();
+      String clusterId = configs.getString("clusterId");
+      DiscoveryStrategyConfig discoveryStrategyConfig =
+          new DiscoveryStrategyConfig(new ZookeeperDiscoveryStrategyFactory());
+      discoveryStrategyConfig.addProperty(ZookeeperDiscoveryProperties.ZOOKEEPER_URL.key(),
+          String.join(",", zookeepers));
+      discoveryStrategyConfig.addProperty(ZookeeperDiscoveryProperties.GROUP.key(), clusterId);
+      config.getNetworkConfig().getJoin().getDiscoveryConfig()
+          .addDiscoveryStrategyConfig(discoveryStrategyConfig);
+  }
+  else if (discoveryMechanism.equals("K8s-API")) {
+    HazelcastKubernetesDiscoveryStrategyFactory hazelcastKubernetesDiscoveryStrategyFactory =
+        new HazelcastKubernetesDiscoveryStrategyFactory();
+    DiscoveryStrategyConfig discoveryStrategyConfig =
+        new DiscoveryStrategyConfig(hazelcastKubernetesDiscoveryStrategyFactory);
+    config.getNetworkConfig().getJoin().getDiscoveryConfig()
+        .addDiscoveryStrategyConfig(discoveryStrategyConfig);
+  }
+  else {
+    LOGGER.fatal("No cluster discovery Mechansim found");
+    return null;
+  }
     return new HazelcastClusterManager(config);
   }
 
@@ -124,9 +139,9 @@ public class Deployer {
       return;
     }
     JsonObject configuration = new JsonObject(config);
-    List<String> zookeepers = configuration.getJsonArray("zookeepers").getList();
-    String clusterId = configuration.getString("clusterId");
-    mgr = getClusterManager(host, zookeepers, clusterId);
+    mgr = getClusterManager(host, configuration);
+    if (mgr == null)
+      return;
     EventBusOptions ebOptions = new EventBusOptions().setClustered(true).setHost(host);
     VertxOptions options = new VertxOptions().setClusterManager(mgr).setEventBusOptions(ebOptions)
         .setMetricsOptions(getMetricsOptions());

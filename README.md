@@ -52,7 +52,7 @@ The api docs can be found [here](https://rs.iudx.org.in/apis).
 1. Please refer [here](readme/docker-based-deployment.md).
 
 ### Maven based
-1. Install java 13 and maven
+1. Install java 11 and maven
 2. Use the maven exec plugin based starter to start the server 
    ```sh 
    mvn clean compile exec:java@resource-server
