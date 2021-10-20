@@ -1813,7 +1813,7 @@ public class ApiServerVerticle extends AbstractVerticle {
         LOGGER.info("audit table updated");
         promise.complete();
       } else {
-        LOGGER.error("failed to update audit table");
+        LOGGER.error("failed to update audit table" + handler.cause());
         promise.complete();
       }
     });

@@ -178,7 +178,10 @@ public class MeteringServiceImpl implements MeteringService {
                 LOGGER.info("Info: " + responseBuilder.getResponse().toString());
                 promise.fail(responseBuilder.getResponse().toString());
               }
-            });
+            })
+        .onFailure(res -> {
+          promise.fail(String.format("INSERT did not work: %s", res.getMessage()));
+        });
     return promise.future();
   }
 }
