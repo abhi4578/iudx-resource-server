@@ -155,6 +155,8 @@ public class MeteringServiceImpl implements MeteringService {
   private Future<JsonObject> writeInDatabase(JsonObject query) {
     Promise<JsonObject> promise = Promise.promise();
     JsonObject response = new JsonObject();
+    LOGGER.debug("Query is:" + query.toString());
+    LOGGER.debug("getting connection: " + pool.getConnection().cause());
     pool.getConnection()
         .compose(connection -> connection.query(query.getString(QUERY_KEY)).execute())
         .onComplete(
@@ -182,6 +184,7 @@ public class MeteringServiceImpl implements MeteringService {
         .onFailure(res -> {
           promise.fail(String.format("INSERT did not work: %s", res.getMessage()));
         });
+    LOGGER.debug("Finished Query :" + query.toString());
     return promise.future();
   }
 }
